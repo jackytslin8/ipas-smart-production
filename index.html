@@ -326,7 +326,7 @@ function rangeLabel(keys){
 /* ================= state ================= */
 let sel=BASE.slice(), weakOnly=false, mix=true;
 let stats={};             // id → [streak, right, wrong]；wrong 永久累計，不因「熟了」清掉
-let order=[], qi=-1, Q=null, again=false, answered=false, shown=0;
+let order=[], qi=-1, Q=null, again=false, answered=false, shown=0; let autoTimer=null;
 let retry=[];             // [{id, due}]
 let starred=new Set();    // 標成「不確定」的題（使用者自己標的，清除作答紀錄不會清掉）
 let picks={};             // id → 每次答錯時選的「原始」選項索引（依時間順序，最多留 20 筆；匯出分析用）
@@ -381,7 +381,7 @@ function nextQuestion(){
 
 function showQuestion(){
   const q=QS[Q.id];
-  answered=false; starredNow=null;
+  clearTimeout(autoTimer); answered=false; starredNow=null;
   $('kind').textContent=where(q);
   $('again').hidden=!again;
   showStar();
@@ -432,8 +432,10 @@ function finish(ok){
     }
     msg.textContent= world.water===REWARD ? '答對了，得到兩滴水。'+note
       : '答對了，又多兩滴水。'+note;
-    // 答對：1.2 秒後自動下一題
-    setTimeout(()=>{ if(answered) nextQuestion(); }, 1200);
+    // 答對：隱藏舊卡片，1 秒後自動下一題
+    $('after').classList.remove('on');
+    clearTimeout(autoTimer);
+    autoTimer=setTimeout(()=>{ nextQuestion(); }, 1000);
   }else{
     retry.push({id:Q.id,due:shown+3+Math.floor(Math.random()*3)});
     if(starred.has(Q.id)) starOk[Q.id]=0;
