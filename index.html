@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>一滴水・初級智慧生產工程師</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --soil:#bba88b; --speck:#a08d70; --speck2:#cbbb9f;
+  --wet:#6f5a40;
+  --panel:#e8ebe1; --ink:#27301f; --muted:#66705a; --line:#c9cfbd;
+  --opt:#f4f6ef; --opt-hover:#fbfcf8;
+  --water:#3b7ea8; --right:#4c7a33; --wrong:#a4513b; --star:#a8741a;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --soil:#5c4f3d; --speck:#4b4032; --speck2:#6a5c48; --wet:#2e251a;
+    --panel:#1c2119; --ink:#e2e6d8; --muted:#9aa38c; --line:#343c2e;
+    --opt:#252b21; --opt-hover:#2d3428;
+    --water:#6fb1d8; --right:#8fbf6c; --wrong:#e0886f; --star:#e2b55a;
+  }
+}
+:root[data-theme="dark"]{
+  --soil:#5c4f3d; --speck:#4b4032; --speck2:#6a5c48; --wet:#2e251a;
+  --panel:#1c2119; --ink:#e2e6d8; --muted:#9aa38c; --line:#343c2e;
+  --opt:#252b21; --opt-hover:#2d3428;
+  --water:#6fb1d8; --right:#8fbf6c; --wrong:#e0886f; --star:#e2b55a;
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{
+  background:var(--panel); color:var(--ink);
+  font-family:"LXGW WenKai TC","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  display:flex; overflow:hidden;
+}
+button{font:inherit}
+.land{position:relative;flex:1;min-width:0;min-height:0;background:var(--soil);overflow:hidden}
+canvas{display:block;width:100%;height:100%;touch-action:manipulation;cursor:default}
+.land.has-water canvas{cursor:pointer}
+.hint{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  font-size:1.35rem;color:var(--ink);opacity:.55;pointer-events:none;
+  text-align:center;line-height:1.6;transition:opacity .6s;white-space:nowrap;
+}
+.hint.gone{opacity:0}
+.toast{
+  position:absolute;left:50%;bottom:1.25rem;transform:translateX(-50%);
+  background:var(--panel);color:var(--ink);padding:.5rem 1rem;border-radius:999px;
+  font-size:1rem;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;
+}
+.toast.show{opacity:.95}
+.snap{
+  position:absolute;right:.75rem;top:.75rem;font-size:.9rem;
+  color:var(--ink);background:var(--panel);border:0;border-radius:999px;
+  padding:.35rem .9rem;cursor:pointer;opacity:.85;
+}
+.snap:hover{opacity:1}
+.snap[hidden]{display:none}
+
+.panel{
+  width:min(540px,48vw);display:flex;flex-direction:column;
+  border-left:1px solid var(--line);min-height:0;
+}
+.water{
+  display:flex;align-items:center;gap:.6rem;padding:.9rem 1.25rem;
+  border-bottom:1px solid var(--line);min-height:3.75rem;
+}
+.water-label{font-size:1rem;color:var(--muted);white-space:nowrap}
+.drops{display:flex;flex-wrap:wrap;gap:.2rem;align-items:center;flex:1;min-width:0}
+.drops svg{width:18px;height:24px;display:block}
+.drops .more{font-size:1rem;color:var(--water);margin-left:.25rem}
+.drops .none{color:var(--muted);font-size:.95rem}
+.pop{animation:pop .5s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{0%{transform:scale(0) translateY(-8px)}100%{transform:scale(1)}}
+.bar-btn{
+  flex:none;font-size:.9rem;color:var(--muted);background:none;
+  border:1px solid transparent;border-radius:999px;padding:.3rem .75rem;cursor:pointer;white-space:nowrap;
+}
+.bar-btn:hover{border-color:var(--line);color:var(--ink)}
+.bar-btn.armed{color:var(--wrong);border-color:var(--wrong)}
+#range{color:var(--ink);border-color:var(--line)}
+
+.view{flex:1;overflow-y:auto;padding:1.1rem 1.5rem 1.5rem;min-height:0}
+.view[hidden]{display:none}
+.where{display:flex;flex-wrap:wrap;gap:.35rem .75rem;align-items:center;font-size:.85rem;color:var(--muted);margin:0 0 .9rem}
+.kind{color:var(--ink);background:var(--opt);border:1px solid var(--line);border-radius:999px;padding:.05rem .6rem}
+.again{color:var(--wrong)}
+.again[hidden]{display:none}
+.star{margin-left:auto;font-size:.85rem;color:var(--muted);background:none;border:1px solid var(--line);border-radius:999px;padding:.1rem .7rem;cursor:pointer;white-space:nowrap}
+.star:hover{color:var(--ink);border-color:var(--muted)}
+.star[aria-pressed="true"]{color:var(--star);border-color:var(--star)}
+
+.stem{margin:0 0 1rem;font-size:1.08rem;line-height:1.8;white-space:pre-line}
+
+.opts{display:flex;flex-direction:column;gap:.5rem;margin:0;padding:0;list-style:none}
+.opt{
+  display:flex;gap:.6rem;width:100%;text-align:left;font-size:1rem;line-height:1.6;
+  color:var(--ink);background:var(--opt);border:1.5px solid var(--line);border-radius:10px;
+  padding:.6rem .8rem;cursor:pointer;
+}
+.opt:hover:not(:disabled){background:var(--opt-hover);border-color:var(--muted)}
+.opt .k{font-weight:700;color:var(--muted);flex:none}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--right);background:color-mix(in srgb,var(--right) 14%,var(--opt))}
+.opt.right .k{color:var(--right)}
+.opt.wrong{border-color:var(--wrong);opacity:.8}
+.opt.wrong .k{color:var(--wrong)}
+.opt.dim{opacity:.5}
+
+.after{margin-top:1rem;display:none;flex-direction:column;gap:.75rem}
+.after.on{display:flex}
+.msg{font-size:1rem;line-height:1.6;margin:0}
+.msg.good{color:var(--right)}
+.msg.bad{color:var(--wrong)}
+.card{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;padding:.6rem .8rem;border-radius:10px;background:var(--opt);border:1px solid var(--line)}
+.card b{font-size:1.05rem;color:var(--right);flex:none}
+.card span{line-height:1.6}
+.card .ex{flex-basis:100%;color:var(--ink);font-size:.95rem;line-height:1.75}
+.card .ex.none{color:var(--muted);font-size:.85rem}
+.next{
+  align-self:flex-start;font-size:1rem;padding:.55rem 1.2rem;border-radius:999px;cursor:pointer;
+  background:var(--ink);color:var(--panel);border:0;
+}
+.next:disabled{opacity:.4;cursor:default}
+.ghost{
+  font-size:1rem;padding:.55rem 1.1rem;border-radius:999px;cursor:pointer;
+  background:none;color:var(--muted);border:1px solid var(--line);
+}
+.ghost:hover{color:var(--ink)}
+
+/* range picker */
+.pick h2{font-size:1.25rem;margin:0 0 .25rem}
+.pick h3{font-size:1rem;margin:1.1rem 0 .5rem;color:var(--muted);font-weight:400}
+.pick .sub{margin:0 0 .75rem;color:var(--muted);font-size:.9rem}
+.units{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.8rem,1fr));gap:.5rem}
+.unit,.chip{
+  text-align:left;color:var(--ink);background:var(--opt);border:1.5px solid var(--line);
+  border-radius:10px;padding:.55rem .7rem;cursor:pointer;
+}
+.unit{display:flex;flex-direction:column;gap:.25rem}
+.unit[aria-pressed="true"],.chip[aria-pressed="true"]{border-color:var(--water);background:color-mix(in srgb,var(--water) 13%,var(--opt))}
+.unit .pg{font-weight:700;font-size:1.05rem}
+.unit .meta{font-size:.8rem;color:var(--muted)}
+.unit .bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.unit .bar i{display:block;height:100%;background:var(--right)}
+.quick{display:flex;flex-wrap:wrap;gap:.5rem;margin:.6rem 0 0}
+.quick button{font-size:.85rem;padding:.25rem .8rem;border-radius:999px;border:1px solid var(--line);background:none;color:var(--muted);cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{border-radius:999px;padding:.4rem .9rem}
+.chip small{color:var(--muted);margin-left:.3rem}
+.unit .desc{font-size:.8rem;color:var(--muted)}
+.unit:disabled{opacity:.45;cursor:default}
+.quick button:disabled{opacity:.45;cursor:default}
+.wrongbook{margin-top:.75rem;border:1px solid var(--line);border-radius:10px;padding:.6rem .8rem;background:var(--opt)}
+.wrongbook[hidden]{display:none}
+.book-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap}
+.book-head .sub{margin:0}
+.book-head .ghost{padding:.3rem .9rem;font-size:.9rem}
+.book{list-style:none;margin:.5rem 0 0;padding:0;max-height:16rem;overflow-y:auto}
+.book{max-height:24rem}
+.book li{border-top:1px solid var(--line)}
+.bq{display:flex;flex-wrap:wrap;gap:.15rem .6rem;width:100%;text-align:left;background:none;border:0;color:var(--ink);padding:.5rem 0;cursor:pointer;font-size:.95rem;line-height:1.6}
+.bq .src{color:var(--muted);font-size:.8rem}
+.bq .bstem{flex-basis:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
+.bq .bans{flex-basis:100%;color:var(--right);font-size:.9rem;display:none}
+.book li.open .bstem{display:block;-webkit-line-clamp:unset}
+.book li.open .bans{display:block}
+.book .tag{color:var(--wrong);font-size:.8rem}
+.book .tag.ok{color:var(--right)}
+.book .tag.plain{color:var(--muted)}
+.book li{display:flex;align-items:flex-start;gap:.4rem}
+.book .bq{flex:1;min-width:0}
+.bstar{flex:none;background:none;border:0;color:var(--muted);font-size:1.1rem;line-height:1;padding:.55rem .2rem;cursor:pointer}
+.bstar[aria-pressed="true"]{color:var(--star)}
+.book-btns{display:flex;gap:.4rem;flex-wrap:wrap}
+.stale{
+  position:absolute;left:50%;top:.75rem;transform:translateX(-50%);width:max-content;max-width:calc(100% - 2rem);
+  background:var(--panel);color:var(--ink);border:1.5px solid var(--wrong);border-radius:12px;
+  padding:.6rem .9rem;font-size:.95rem;line-height:1.5;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;
+}
+.stale[hidden]{display:none}
+.stale button{font-size:.9rem;padding:.3rem .9rem;border-radius:999px;border:0;background:var(--ink);color:var(--panel);cursor:pointer}
+/* 存檔失敗警告會一直掛著：靠左放，讓出右上角的「存成圖片」 */
+#savewarn{left:.75rem;transform:none;max-width:calc(100% - 8.5rem)}
+.go{margin-top:1.25rem}
+.credit{margin:.9rem 0 0;font-size:.75rem;line-height:1.6;color:var(--muted)}
+.credit .ver{margin-left:.5rem;white-space:nowrap}
+.fine{margin-top:1.5rem;display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+
+button:focus-visible,.unit:focus-visible,.chip:focus-visible{outline:3px solid var(--water);outline-offset:2px}
+/* 鍵盤移動選項：低調的焦點（只在鍵盤操作時出現，滑鼠點擊不會） */
+.opt:focus-visible{outline:none;border-color:var(--water);background:var(--opt-hover);box-shadow:0 0 0 3px color-mix(in srgb,var(--water) 16%,transparent)}
+
+@media (max-width:760px){
+  body{flex-direction:column}
+  .land{flex:1 1 40%}
+  .panel{width:100%;flex:1 1 60%;border-left:0;border-top:1px solid var(--line)}
+  .water{padding:.5rem 1rem;min-height:3rem;gap:.4rem}
+  .view{padding:.9rem 1rem 1.2rem}
+  .stem{font-size:1.02rem}
+  .opt{font-size:.97rem}
+}
+@media (max-width:480px){ .water-label{display:none} }
+@media (prefers-reduced-motion:reduce){.pop{animation:none}}
+</style>
+</head>
+<body>
+<main class="land" id="land">
+  <canvas id="cv" aria-label="你的土地。手上有水時，點一下土地把水滴下去。"></canvas>
+  <div class="hint" id="hint">一片安靜的空地</div>
+  <div class="toast" id="toast" role="status"></div>
+  <button class="snap" id="snap" hidden>存成圖片</button>
+  <div class="stale" id="stale" role="alert" hidden>另一個分頁更新了紀錄，這個分頁先暫停存檔。<button type="button" onclick="location.reload()">重新載入</button></div>
+  <div class="stale" id="savewarn" role="alert" hidden>存檔失敗（可能是瀏覽器空間不足），最近的進度還沒存到。</div>
+</main>
+<aside class="panel">
+  <div class="water">
+    <span class="water-label">手上的水</span>
+    <div class="drops" id="drops" aria-live="polite"></div>
+    <button class="bar-btn" id="range">範圍</button>
+    <button class="bar-btn" id="reset">清空土地</button>
+  </div>
+
+  <section class="view" id="quiz" hidden>
+    <p class="where"><span class="kind" id="kind"></span><span id="scope"></span><span class="again" id="again" hidden>上次答錯的題</span><button class="star" id="star" type="button" aria-pressed="false" title="標成不確定（鍵盤 S）">☆ 不確定</button></p>
+    <p class="stem" id="stem"></p>
+    <ul class="opts" id="opts"></ul>
+    <div class="after" id="after">
+      <p class="msg" id="msg"></p>
+      <div class="card" id="card"></div>
+      <button class="next" id="next">下一題</button>
+    </div>
+  </section>
+
+  <section class="view pick" id="pick" hidden>
+    <h2>要練哪些題？</h2>
+    <p class="sub">初級智慧生產工程師能力鑑定。可以選一份，也可以多選一起考。</p>
+    <div class="units" id="units"></div>
+    <div class="quick">
+      <button type="button" data-q="1">全選科目一</button>
+      <button type="button" data-q="2">全選科目二</button>
+      <button type="button" data-q="all">全選</button>
+      <button id="book" type="button">看錯題本</button>
+      <button id="starbook" type="button">看星號題</button>
+      <button id="allbook" type="button">錯題＋星號一起看</button>
+    </div>
+    <div class="wrongbook" id="wrongbook" hidden></div>
+    <h3>出題方式</h3>
+    <div class="chips">
+      <button class="chip" id="weak">只出還不熟的題</button>
+      <button class="chip" id="mix">打亂選項順序</button>
+    </div>
+    <button class="next go" id="go">開始</button>
+    <div class="fine">
+      <span>連續答對兩次，就算這題「熟了」。紀錄存在這台裝置上。</span>
+      <button class="bar-btn" id="wipe">清除作答紀錄</button>
+    </div>
+    <p class="credit">題目：114-2 初級智慧生產工程師能力鑑定試題：智慧製造生產線管理基礎（阿摩線上測驗 #133489）。<span class="ver" id="ver"></span></p>
+  </section>
+</aside>
+
+<script type="application/json" id="bank">[{"id":"115-2-1-1","src":"115-2","subj":1,"n":1,"q":"1. 下列何者不是 ERP 系統的一般主要功能？","o":["生產計畫與排程","存貨管理","生產成本控制","工作站管理"],"a":3,"ex":"","t":""},{"id":"115-2-1-2","src":"115-2","subj":1,"n":2,"q":"2. E 化製造系統中，製造現場機台設備故障時，對於物料流及產量等的衝擊可即時被估計出，並經由 MES、ERP 及 CRM 的合作機制即時更新所衍生的庫存需求異動和物料運送資訊，即時讓客服人員得知作應變處理。此為 E 化製造系統四大功能中的何種功能？","o":["資料收集及轉換","預測","同步化","最佳化"],"a":2,"ex":"","t":""},{"id":"115-2-1-3","src":"115-2","subj":1,"n":3,"q":"3. 下列關於 ESP32 的敘述何者正確？","o":["ESP32 的開發板最大優勢為自帶 Wi-Fi 模塊，方便連接網路，應用場景包含「家電監控」、「遠端遙控」、「點對點溝通」及「雲端資料庫」等","ESP32 由於具有作業系統，可以設計出功能更豐富的軟體","ESP32 幾乎可看作一台個人電腦，又有低功耗的優勢，常用來作為網路伺服器","ESP32 是一款超小體積的計算機，它需要利用 TF 卡裝載作業系統 才能夠運行"],"a":0,"ex":"","t":""},{"id":"115-2-1-4","src":"115-2","subj":1,"n":4,"q":"4. 下列關於 Arduino 與樹莓派的敘述何者有誤？","o":["Arduino 無法運行作業系統，這就意味著許多基於作業系統實現的功能無法利用 Arduino 獲得","Arduino 沒有音視頻輸出接口，也沒有網絡接口和能與外圍設備連接的 USB 接口，開發板上沒有多餘的板載存儲器","樹莓派幾乎可看作一台個人電腦，又有低功耗的優勢，常用來作為網路伺服器","樹莓派的性能偏弱，無法處理圖像、複雜運算等對處理器性能要求比較高的場景，但它適合控制感測器輸入輸出、驅動電子元器件這類場合"],"a":3,"ex":"","t":""},{"id":"115-2-1-5","src":"115-2","subj":1,"n":5,"q":"5. 下列何者並非為設備保養的目的？","o":["故障停工時間減少","備用機器增加","資產壽命減少","加班費用減少"],"a":1,"ex":"","t":""},{"id":"115-2-1-6","src":"115-2","subj":1,"n":6,"q":"6. 下列敘述何者並非是需要首件檢驗的情況？","o":["中午休息的時候","一般產品開始投產時","設備重新調整或工藝有重大變化時","操作工人變化時"],"a":0,"ex":"","t":""},{"id":"115-2-1-7","src":"115-2","subj":1,"n":7,"q":"7. 製造執行系統(MES)核心功能不包含以下何者？","o":["存貨追蹤與管理","規劃系統介面","例外管理","以上皆是"],"a":3,"ex":"","t":""},{"id":"115-2-1-8","src":"115-2","subj":1,"n":8,"q":"8. 企業資訊規劃(ERP)往企業內部管理的工作包含以下何者？","o":["營運","品質","距離","以上皆非"],"a":0,"ex":"","t":""},{"id":"115-2-1-9","src":"115-2","subj":1,"n":9,"q":"9. 下列何者非預防性保養的好處？","o":["避免服務中斷並提高生產力","延長資產壽命、推遲重新購買","減少機台設備維修保養花費的時間成本","降低維修的成本和複雜性"],"a":2,"ex":"","t":""},{"id":"115-2-1-10","src":"115-2","subj":1,"n":10,"q":"10. 下列何者不屬於智慧化現場管理概念？","o":["建構可視化戰情看板掌握產品帳料資訊","利用機器學習技術分析產品品質數據預防問題再發","推動創新改善並將流程建立標準化操作系統","運用 RFID 和感測元件在生產現場收集並呈現予管理、作業人員特定資訊"],"a":1,"ex":"","t":""},{"id":"115-2-1-11","src":"115-2","subj":1,"n":11,"q":"11. 現場管理因下列何種技術而具備更彈性、即時的生產條件？","o":["機台自動化能力提高產出即時機器 log 資料","感測元件應用於設備、貨架、料架提供即時資訊","高效運算的電腦處理龐大生產資料","以上皆是"],"a":3,"ex":"","t":""},{"id":"115-2-1-12","src":"115-2","subj":1,"n":12,"q":"12. 下列何者為最佳化問題的五步驟？①問題的陳述 ②定義設計變數③定義約束/限制條件④定義最佳化目標 ⑤數據和信息的收集","o":["①②③④⑤","⑤①②③④","①⑤②④③","②③④⑤①"],"a":2,"ex":"","t":""},{"id":"115-2-1-13","src":"115-2","subj":1,"n":13,"q":"13. 下列何者不是大數據(Big Data)結合人工智慧(Artificial Intelligence，AI)最佳化應用於製造之應用模式之一？","o":["物料品質監控","設備異常監控與預測","零件生命週期預測","不良率保固分析"],"a":3,"ex":"","t":""},{"id":"115-2-1-14","src":"115-2","subj":1,"n":14,"q":"14. 下列何者是製造執行系統(Manufacturing Execution System，MES) 的架構？","o":["文字化界面","封閉式系統架構","整合工具","對等式架構"],"a":2,"ex":"","t":""},{"id":"115-2-1-15","src":"115-2","subj":1,"n":15,"q":"15. EPCglobal 網路的 RFID 技術初階段著重在供應鏈的應用，因此須建構傳遞物件資訊的整體網路，網路主要構成有五個元素：產品電子碼、 RFID 標籤與讀取器、EPC 中介軟體、物件名稱解析服務及 EPC 資訊服務。下列關於 EPCglobal 的敘述何者正確？","o":["所有參與流通的物品都具有唯一的身分辨識號碼","物件名稱解析服務是一個半自動的網路服務系統，類似網域名稱解析服務(DNS)","EPC 中介軟體主要負責資料加工、資料分析、資料儲存","EPCglobal 網路內，偽造商品(無電子履歷)依舊可以流通"],"a":0,"ex":"","t":""},{"id":"115-2-1-16","src":"115-2","subj":1,"n":16,"q":"16. 通訊網路的可靠度和即時性都是工業環境應用基本且重要的需求， WirelessHART 和 ISA100 等工業無線感測網路標準就是為了能在流程自動化及生產製程中符合這種嚴苛的需求所制定。下列關於 ISA100 的敘述，何者有誤？","o":["International Society of Automation 之 ISA100 委員會將工業應用分成 0-5 級","依照訊息即時性需求，從最低的第 0 級到最高的第 5 級劃分","現行的工業無線傳輸標準主要目標在非關鍵性控制以及監控的應 用","ISA100 應用種類分為安全、控制以及監控"],"a":1,"ex":"","t":""},{"id":"115-2-1-17","src":"115-2","subj":1,"n":17,"q":"17. 目前虛擬化技術的應用非常廣泛，透過虛擬化技術，可以使用尚未虛擬化前的資源存取方式，來存取虛擬化後的資源。雲端基礎架構虛擬化包含下列何者？1.網路虛擬化；2.儲存體虛擬化；3.計算系統虛擬化；4.軟體虛擬 化；5.桌面虛擬化；6.資料虛擬化","o":["13456","12456","12345","12346"],"a":2,"ex":"","t":""},{"id":"115-2-1-18","src":"115-2","subj":1,"n":18,"q":"18. 下列有關雲端運算的 SWOT 分析，請問何者正確？","o":["優勢-有標準規範及法規","機會-Green IT 意識抬頭","劣勢-供應商無法作出顧客要求的高品質服務和有利的保證","威脅-對現有 IT 模式造成衝擊"],"a":1,"ex":"","t":""},{"id":"115-2-1-19","src":"115-2","subj":1,"n":19,"q":"19. 雲端運算廠商角色包括：創始者、技術提供者、推動者及創新改革者。請問下列何者非創始者？","o":["IBM","Amazon","Google","Microsoft"],"a":1,"ex":"","t":""},{"id":"115-2-1-20","src":"115-2","subj":1,"n":20,"q":"20. 下列關於雲端安全與隱私標準的 ISO/IEC 270XX 的敘述何者有誤？","o":["WG1 負責資訊安全管理標準制定","WG3 負責雲端安全障礙標準制定","WG4 負責安全技術標準制定","WG5 負責身分識別與隱私安全標準制定"],"a":1,"ex":"","t":""},{"id":"115-2-1-21","src":"115-2","subj":1,"n":21,"q":"21. 一般所謂的商業智慧(Business Intelligence，BI)指的是，企業利用資訊技術，收集、管理與分析結構化與非結構化資料的商務資料與資訊，商業智慧流程通常分為以下步驟，何者有誤？","o":["資料轉換","資料彙整","資料分析","資料呈現"],"a":0,"ex":"","t":""},{"id":"115-2-1-22","src":"115-2","subj":1,"n":22,"q":"22. 下列對於資料探勘方法中的群集分析(Cluster Analysis)敘述何者正確？","o":["在群集分析中，一個群集代表單一物件","此分析方法的精神即是以複雜度來對數據做分解","分群的目的在於可以有效地將數據統整分類","群集分析在分析資料物件時，不需要諮詢物件的類別標籤"],"a":3,"ex":"","t":""},{"id":"115-2-1-23","src":"115-2","subj":1,"n":23,"q":"23. 下列關於個案研究的四階段過程，其順序何者正確？1.基本現況調查；2.基本數據作業調查；3.總合效率指標計算；4.解析報告","o":["1234","2134","4123","4213"],"a":0,"ex":"","t":""},{"id":"115-2-1-24","src":"115-2","subj":1,"n":24,"q":"24. 下列描述預測性保養(Predictive maintenance)可帶來的效益，何者正確？","o":["掌握設備損壞時間，與反應性保養(reactive maintenance)比，避免過度維護所造成資源浪費跟不必要的停機","與預防性保養(Preventive maintenance)比，避免非預期的故障停機","安排最合適的維修時間，不會因為維護影響產品交期","通常看成是工業 3.0 的重要一環"],"a":2,"ex":"","t":""},{"id":"115-2-1-25","src":"115-2","subj":1,"n":25,"q":"25. FA 生產現場自動化機台『顯示、操控』功能，主要是透過觸控螢幕上的 HMI 來實現，下面有關 HMI 的操作，何者有誤？","o":["善用動畫媒體或 PDF 等說明文件，顯示機械的操作資訊，因此能以直覺進行現場的操作","操作前或中，要隨時應用 HMI 中狀態顥示功能，監看控制器異常/ 控制器事件/用戶異常/用戶事件等","透過切換分頁不用切換畫面，即可輕鬆監視/變更各種資料","一發生異常，立刻重按 RESET 鍵，重啓機台"],"a":3,"ex":"","t":""},{"id":"115-2-1-26","src":"115-2","subj":1,"n":26,"q":"26. 下列關於 6S 管理的描述，何者正確？","o":["標準工作流程(Standardize)：已貫徹前面的 3S，並導入例如 ISO9001 的標準工作流程，全面提升工作效率與產品品質","整理(Sort)：整理後留在現場的工具，分類擺放，並貼上標示","安全(Security)：此階段的員工已融會貫通 4S 價值觀，不再只有照表操課，已具備操作精密與高端製程的卓越實力","持續養成良好工作習慣(Sustain)：重視員工職業健康與安全，設置各式軟硬體防護措施，達成零事故工安目標"],"a":0,"ex":"","t":""},{"id":"115-2-1-27","src":"115-2","subj":1,"n":27,"q":"27. 下列有關自動化系統現場操作的描述，何者有誤？","o":["操作人員一定要經過專業的自動化培訓，深刻瞭解自動化控制系統的工作原理，熟悉自動化程式的畫面，能夠熟練操作自動化控制系統","只有當天值班的工作人員才有權利操作自動化控制系統，其他人 員不得擅自操作該系統","如果自動化控制系統保護裝置作動，產線停止，應立即按下復原鈕重開，以免影響產能","如果發生突然的停電後，再來電時，要對系統的各參數進行檢查，使其和原來的資料保持一致"],"a":2,"ex":"","t":""},{"id":"115-2-1-28","src":"115-2","subj":1,"n":28,"q":"28. 某工廠稼動率(Availability)是 86.7%、產能效率(Performance)是93.0%、良率(Quality)是 95.0%，請問其整體設備效率(OEE)何者正確？","o":["88.35%","80.63 %","76.6%","72.3%"],"a":2,"ex":"","t":""},{"id":"115-2-1-29","src":"115-2","subj":1,"n":29,"q":"29. 下面有關設備產出的良率(Quality)的描述，何者正確？","o":["在兩個以上的製程時，從第一個製程投入，到最後一個製程產出的良率又叫直通率(First Pass Yield, FPY)","若工站只有一站，則該工站的良率會等於直通率","公式為 [投入總數–(返工數+返修數+退貨數)] ÷ 投入總數 x100%","以上皆是"],"a":3,"ex":"","t":""},{"id":"115-2-1-30","src":"115-2","subj":1,"n":30,"q":"30. 巨量資料特性可用 5V 來了解，以下何者屬於 5V 之一？","o":["Victory","Vegetable","Volume","Voice"],"a":2,"ex":"","t":""},{"id":"115-2-1-31","src":"115-2","subj":1,"n":31,"q":"31. 從資料中發掘知識(Knowledge Discovery from Data, KDD)係經過一系列持續循環架構，將資料轉換成知識，以下何者並非 KDD 主要步驟之一？","o":["資料清理(data cleaning)","資料整合(data integration)","資料轉換(data transformation)","資料擴增(data expansion)"],"a":3,"ex":"","t":""},{"id":"115-2-1-32","src":"115-2","subj":1,"n":32,"q":"32. 近年來，AI 技術應用越來越廣泛，請問 AI 係針對哪兩個英文字的縮寫？","o":["Artificial integration","Automated integration","Artificial intelligence","Automated intelligence"],"a":2,"ex":"","t":""},{"id":"115-2-1-33","src":"115-2","subj":1,"n":33,"q":"33. 以下何者並非機器人整合製造之各種主要作業及特性？","o":["加工作業","搬運作業","評估作業","檢測作業"],"a":2,"ex":"","t":""},{"id":"115-2-1-34","src":"115-2","subj":1,"n":34,"q":"34. 3D 列印又稱積層製造(Additive manufacturing, AM)，請問以下關於3D 列印之所以用”additive”字眼，其與一般加工方法之主要差異，以下敘述何者最正確？","o":["3D 列印成本較高，所以用 additive 字眼","3D 列印時間較長，所以用 additive 字眼","3D 列印屬於材料疊加，而非移除材料，所以用 additive 字眼","3D 列印技術較先進，所以用 additive 字眼"],"a":2,"ex":"","t":""},{"id":"115-2-1-35","src":"115-2","subj":1,"n":35,"q":"35. 建構機器視覺自動檢測系統(Automated optical inspection,AOI)，不需要下列何者次系統？","o":["負責打光之光源系統","負責取像之視覺系統","負責影像處理之電腦系統","負責設計之繪圖系統"],"a":3,"ex":"","t":""},{"id":"115-2-1-36","src":"115-2","subj":1,"n":36,"q":"36. 為了制訂預防保養 (preventive maintenance)計畫，習知該設備的可靠度為制定計畫的首要步驟，假設某一機台壽命機率密度函數為 ，單位為月。該機台在 3 個月內不失效的機率為何?","o":["0.09","0.26","0.44","0.59"],"a":2,"ex":"","t":""},{"id":"115-2-1-37","src":"115-2","subj":1,"n":37,"q":"37. 下列有關保養 (Maintenance)的敘述有誤。","o":["系統的保養 (maintenance)可分為兩大類；第一類稱為「預防保養」(preventive maintenance)；第二類稱為「修復保養」 (corrective maintenance)","預防保養通常適合在系統處於「夭折期」或「有用生命期」中實施","不完善保養(imperfect maintenance)係指預防保養後之可靠度無法達到「全新使用狀態」時之水準","修復保養係指對「已故障」的系統進行「修理」(repair)，使之 能回復正常功能而實施之保養"],"a":1,"ex":"","t":""},{"id":"115-2-1-38","src":"115-2","subj":1,"n":38,"q":"38. 為了機台的故障排除，下列何者不是常見用於故障排除的手法?","o":["散佈圖 (Scatter plot)","缺陷樹圖 (Fault tree analysis)","失效模式與影響分析(Fault mode effects analysis)","矩陣圖法 (Matrix diagram)"],"a":0,"ex":"","t":""},{"id":"115-2-1-39","src":"115-2","subj":1,"n":39,"q":"39. 預防保養(preventive maintenance)模型中常用指數分配(exponential distribution)進行可靠度模型推導，下列對於指數分配推導出的結果何者正確 (α為一常數)？","o":["故障機率 f(t)=αe-αt, 0≤t","可靠度 R(t)= αe-t,","故障率λ(t)= αt","以上皆正確"],"a":0,"ex":"","t":""},{"id":"115-2-1-40","src":"115-2","subj":1,"n":40,"q":"40. 浴缸曲線常用在可靠度工程，下列何者並非其中的一部分？","o":["隨時間遞減的失效率，稱為早期失效","固定的失效率，稱為隨機失效","變化的失效率，稱為變動失效","超過其設計壽命後，隨時間遞增的失效率，稱為老化失效"],"a":2,"ex":"","t":""},{"id":"115-2-1-41","src":"115-2","subj":1,"n":41,"q":"41. 在製造執行系統 (MES) 中，資料分析的基礎能力主要用於？","o":["存儲資料","了解生產狀態並進行優化","加密資料","設定員工薪資"],"a":1,"ex":"","t":""},{"id":"115-2-1-42","src":"115-2","subj":1,"n":42,"q":"42. 批次控制(Run-to-Run Control)在 MES 中主要是用於什麼？","o":["監控每一批產品的品質","量測生產機器的運行時間","計算生產成本","設定生產排程"],"a":0,"ex":"","t":""},{"id":"115-2-1-43","src":"115-2","subj":1,"n":43,"q":"43. 當進行流程決策分析與優化時，哪一項不是資料分析的主要考慮因素？","o":["生產速度","產品缺陷率","組織文化","設備的運行狀態"],"a":2,"ex":"","t":""},{"id":"115-2-1-44","src":"115-2","subj":1,"n":44,"q":"44. 某生產單位設置 5 台設備，每日上班時間為 8:00~17:00，中午休息60 分鐘，雖上午與下午各有 15 分鐘的休息時間，但是機台持續運轉生產。如果該單位本週工作五天，並且有某台設備故障 5 小時，則該單位本週的設備稼動率為？","o":["97.3%","97.5%","97.6%","97.8%"],"a":1,"ex":"","t":""},{"id":"115-2-1-45","src":"115-2","subj":1,"n":45,"q":"45. 某工廠工作站生產 100 個產品，過程中產生 10 個不良品，因此額外花費 10 分鐘重工將不良品修整為良品。請問該工作站的良品率與直行率分別為何？","o":["良品率 100%，直行率 100%","良品率 100%，直行率 90%","良品率 90%，直行率 100%","良品率 90%，直行率 90%"],"a":1,"ex":"","t":""},{"id":"115-2-1-46","src":"115-2","subj":1,"n":46,"q":"46. 國際製造工程學會(Society of Manufacturing Engineers, SME) 於 1985 年提出了電腦整合製造(Computer Integrated Manufacturing, CIM)的概念架構。該架構包含了哪些主要元素？","o":["工廠自動化","產品與製程設計","製造規劃與管制","以上皆是"],"a":3,"ex":"","t":""},{"id":"115-2-1-47","src":"115-2","subj":1,"n":47,"q":"47. 關於結構化資料儲存，下列敘述何者正確？","o":["有明確的欄位定義","執行效率低","資料模型不一致","資料模型化能力弱"],"a":0,"ex":"","t":""},{"id":"115-2-1-48","src":"115-2","subj":1,"n":48,"q":"48. 下列何者非 IoT 的基本協定層架構？","o":["感知層","網路層","應用層","企業層"],"a":3,"ex":"","t":""},{"id":"115-2-1-49","src":"115-2","subj":1,"n":49,"q":"49. ISO/IEC 18000-7 規範是應用在何項無線通訊技術的標準？","o":["Bluetooth","Wi-Fi","RFID","Zigbee"],"a":2,"ex":"","t":""},{"id":"115-2-1-50","src":"115-2","subj":1,"n":50,"q":"50. 下列哪一項通訊技術可應用於無線感測網路(Wireless Sensor Network, WSN)？","o":["zigbee","wirelessHART","WiFi","以上皆是"],"a":3,"ex":"","t":""}]</script>
+<script src="one-drop-lib/world.v1.2.js"></script>
+<script>
+/* ================= 題庫 =================
+   每題：{id, src:'115-2'|'guide', subj:1|2, n:題號, sec:指引章節, q:題幹, o:[4 選項], a:正解 0–3, ex:解析,
+          t:官方評鑑內容細項（例如 '3.2-3'，assemble.py 從 topics.json 併入，人工依題意分類）}
+   選項以原始順序存；出題時可打亂（含「以上皆是」這類依位置的選項則不打亂）。 */
+const $ = id => document.getElementById(id);
+const BANK=JSON.parse($('bank').textContent);
+const QS={};
+BANK.forEach(q=>{ QS[q.id]=q; });
+const ALL_IDS=BANK.map(q=>q.id);
+const SUBJ={1:'人工智慧基礎概論',2:'生成式 AI 應用與規劃'};
+const CN={1:'一',2:'二'};
+// 官方評鑑主題／評鑑內容（學習指引第一章）；q.t = '章節-細項'
+const THEME={1:{'3.1':'人工智慧概念','3.2':'資料處理與分析概念','3.3':'機器學習概念','3.4':'鑑別式 AI 與生成式 AI 概念'},
+             2:{'3.1':'No code / Low code 概念','3.2':'生成式 AI 應用領域與工具使用','3.3':'生成式 AI 導入評估規劃'}};
+const TOPIC={1:{'3.1-1':'AI 的定義與分類','3.1-2':'AI 治理概念','3.2-1':'資料基本概念與來源','3.2-2':'資料整理與分析流程','3.2-3':'資料隱私與安全',
+                '3.3-1':'機器學習基本原理','3.3-2':'常見的機器學習模型','3.4-1':'鑑別式與生成式 AI 的基本原理','3.4-2':'鑑別式與生成式 AI 的整合應用'},
+             2:{'3.1-1':'No Code / Low Code 的基本概念','3.1-2':'No Code / Low Code 的優勢與限制','3.2-1':'生成式 AI 應用領域與常見工具',
+                '3.2-2':'如何善用生成式 AI 工具','3.3-1':'生成式 AI 導入評估','3.3-2':'生成式 AI 導入規劃','3.3-3':'生成式 AI 風險管理'}};
+const topicShort=q=>(q.t&&TOPIC[q.subj][q.t])||'';
+const topicLong=q=>q.t ? q.t.split('-')[0]+' '+THEME[q.subj][q.t.split('-')[0]]+' › '+topicShort(q) : '';
+const canMix=q=>!q.o.some(o=>/^以上/.test(o));
+function where(q){
+  return q.src==='guide' ? '學習指引 科目'+CN[q.subj]+' '+q.sec+' 第 '+q.n+' 題'
+                         : q.src+' 科目'+CN[q.subj]+' 第 '+q.n+' 題';
+}
+
+/* ---------- 範圍 ---------- */
+const everWrong=id=>!!(stats[id]&&stats[id][2]>0);
+// 錯題本：答錯過、還沒連對兩次的題。連對兩次就離開；之後再答錯 streak 歸零，自動回來
+const inWrongBook=id=>everWrong(id)&&!mastered(id);
+const RANGES=[];
+[...new Set(BANK.filter(q=>q.src!=='guide').map(q=>q.src))].sort().reverse().forEach(src=>{
+  for(const s of [1,2]) RANGES.push({key:src+'-'+s, subj:s, label:src+' 科目'+CN[s], desc:SUBJ[s],
+    ids:(ids=>()=>ids)(ALL_IDS.filter(id=>QS[id].src===src&&QS[id].subj===s))});
+});
+for(const s of [1,2]) RANGES.push({key:'g'+s, subj:s, label:'指引 科目'+CN[s], desc:'模擬考題，附解析',
+  ids:(ids=>()=>ids)(ALL_IDS.filter(id=>QS[id].src==='guide'&&QS[id].subj===s))});
+RANGES.push({key:'wrong', label:'錯題', desc:'答錯、還沒連對兩次', ids:()=>ALL_IDS.filter(inWrongBook)});
+RANGES.push({key:'star', label:'星號題', desc:'標成不確定的題', ids:()=>ALL_IDS.filter(id=>starred.has(id))});
+const BASE=RANGES.filter(r=>r.subj).map(r=>r.key);
+const rangeOf=k=>RANGES.find(r=>r.key===k);
+function idsOf(keys){ return [...new Set(keys.flatMap(k=>{const r=rangeOf(k);return r?r.ids():[]}))]; }
+function rangeLabel(keys){
+  const has=list=>list.every(k=>keys.includes(k));
+  const s1=BASE.filter(k=>rangeOf(k).subj===1), s2=BASE.filter(k=>rangeOf(k).subj===2);
+  const out=[]; let rest=keys.slice();
+  if(has(BASE)){ out.push('全部題目'); rest=rest.filter(k=>!BASE.includes(k)); }
+  else{
+    if(has(s1)){ out.push('科目一全部'); rest=rest.filter(k=>!s1.includes(k)); }
+    if(has(s2)){ out.push('科目二全部'); rest=rest.filter(k=>!s2.includes(k)); }
+  }
+  rest.forEach(k=>{const r=rangeOf(k); if(r) out.push(r.label)});
+  return out.length>3 ? out.slice(0,2).join('、')+' 等 '+out.length+' 份' : out.join('、');
+}
+
+/* ================= state ================= */
+let sel=BASE.slice(), weakOnly=false, mix=true;
+let stats={};             // id → [streak, right, wrong]；wrong 永久累計，不因「熟了」清掉
+let order=[], qi=-1, Q=null, again=false, answered=false, shown=0;
+let retry=[];             // [{id, due}]
+let starred=new Set();    // 標成「不確定」的題（使用者自己標的，清除作答紀錄不會清掉）
+let picks={};             // id → 每次答錯時選的「原始」選項索引（依時間順序，最多留 20 筆；匯出分析用）
+let starOk={};            // id → 標上星號之後連續答對幾次；到 2 就自動拿掉星號
+let starredNow=null;      // 這一題是在「作答前」才標的星號：這次答對不算（多半是猜的）
+const mastered=id=>(stats[id]&&stats[id][0]>=2);
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function selIds(){ return idsOf(sel); }
+function pool(){
+  const all=selIds();
+  if(!weakOnly) return all;
+  const weak=all.filter(id=>!mastered(id));
+  if(!weak.length){ toast('這個範圍的題目全都熟了，改成全部出'); return all; }
+  return weak;
+}
+
+/* ---------- building a question ---------- */
+// perm[顯示位置] = 原始選項索引；a = 正解的顯示位置
+function buildQ(id){
+  const q=QS[id];
+  const perm = mix && canMix(q) ? shuffle([0,1,2,3]) : [0,1,2,3];
+  return {id, perm, a:perm.indexOf(q.a)};
+}
+const validPerm=p=>Array.isArray(p)&&p.length===4&&[0,1,2,3].every(i=>p.includes(i));
+
+/* ---------- flow ---------- */
+function nextQuestion(){
+  for(let tries=0;tries<30;tries++){
+    shown++;
+    const r=retry.findIndex(x=>x.due<=shown);
+    let id;
+    if(r>=0){ id=retry.splice(r,1)[0].id; again=true; }
+    else{
+      qi++;
+      if(qi>=order.length){
+        if(order.length) toast('這個範圍全部出過一輪了，重新洗牌');
+        order=shuffle(pool()); qi=0;
+        if(Q && order.length>1 && order[0]===Q.id) order.push(order.shift());
+      }
+      id=order[qi]; again=false;
+      retry=retry.filter(x=>x.id!==id);
+    }
+    if(!QS[id]){                            // 範圍是空的（例如錯題全清掉了）
+      if(!order.length){ Q=null; toast('這個範圍目前沒有題目，換一個吧'); openPick(); return; }
+      continue;
+    }
+    Q=buildQ(id); showQuestion(); save();
+    return;
+  }
+  Q=null; toast('一直出不了題，換個範圍試試'); openPick();
+}
+
+function showQuestion(){
+  const q=QS[Q.id];
+  answered=false; starredNow=null;
+  $('kind').textContent=where(q);
+  $('again').hidden=!again;
+  showStar();
+  updateScope();
+  $('stem').textContent=q.q;
+  const ul=$('opts'); ul.innerHTML='';
+  Q.perm.forEach((oi,i)=>{
+    const li=document.createElement('li');
+    const b=document.createElement('button');
+    b.className='opt';
+    b.innerHTML='<span class="k">'+'ABCD'[i]+'</span><span></span>';
+    b.lastChild.textContent=q.o[oi];
+    b.onclick=()=>answer(i);
+    li.appendChild(b); ul.appendChild(li);
+  });
+  $('after').classList.remove('on');
+  $('quiz').scrollTop=0;
+}
+function showStar(){
+  const on=!!Q&&starred.has(Q.id), b=$('star');
+  b.setAttribute('aria-pressed',on); b.textContent=(on?'★':'☆')+' 不確定';
+}
+function toggleStar(id){
+  if(starred.has(id)){ starred.delete(id); delete starOk[id]; }
+  else{ starred.add(id); starOk[id]=0; if(Q&&Q.id===id&&!answered) starredNow=id; }
+  save();
+}
+$('star').onclick=()=>{ if(!Q) return; toggleStar(Q.id); showStar(); toast(starred.has(Q.id)?'標上星號了，範圍選單可以匯出':'星號拿掉了'); };
+function record(id,ok){
+  const s=stats[id]||[0,0,0];
+  if(ok){s[0]++;s[1]++}else{s[0]=0;s[2]++}
+  stats[id]=s;
+}
+// iPAS 的題目比較長：答對一題給兩滴水（world 不用改，只改這裡呼叫 addWater 的量）
+const REWARD=2;
+function finish(ok){
+  const q=QS[Q.id];
+  record(Q.id,ok);
+  const msg=$('msg');
+  if(ok){
+    world.addWater(REWARD);
+    msg.className='msg good';
+    const justMastered=stats[Q.id][0]===2;
+    let note= !justMastered ? '' : everWrong(Q.id) ? '這題熟了，離開錯題本。' : '這題熟了。';
+    if(starred.has(Q.id) && starredNow!==Q.id){
+      starOk[Q.id]=(starOk[Q.id]||0)+1;
+      if(starOk[Q.id]>=2){ starred.delete(Q.id); delete starOk[Q.id]; showStar(); note+='標星號後連對兩次，星號自動拿掉了。'; }
+    }
+    msg.textContent= world.water===REWARD ? '答對了，得到兩滴水。點土地，把它們滴下去。'+note
+      : '答對了，又多兩滴水。'+note;
+  }else{
+    retry.push({id:Q.id,due:shown+3+Math.floor(Math.random()*3)});
+    if(starred.has(Q.id)) starOk[Q.id]=0;
+    msg.className='msg bad';
+    msg.textContent='答案是 '+'ABCD'[Q.a]+'。這題過一會兒會再出現。';
+  }
+  const card=$('card'); card.innerHTML='';
+  const b=document.createElement('b'); b.textContent='正解 '+'ABCD'[Q.a];
+  const s=document.createElement('span'); s.textContent=q.o[q.a];
+  card.append(b, s);
+  const e=document.createElement('small'); e.className='ex';
+  e.textContent= q.ex ? '解析：'+q.ex : '（歷屆試題沒有官方解析）';
+  if(!q.ex) e.classList.add('none');
+  card.append(e);
+  $('after').classList.add('on');
+  $('next').focus({preventScroll:true});
+  requestAnimationFrame(()=>$('after').scrollIntoView({block:'nearest',behavior:'smooth'}));
+  save();
+}
+function answer(i){
+  if(answered||i>=4) return;
+  answered=true;
+  if(i!==Q.a){ const pk=picks[Q.id]||(picks[Q.id]=[]); pk.push(Q.perm[i]); if(pk.length>20) pk.shift(); }
+  [...document.querySelectorAll('.opt')].forEach((b,k)=>{
+    b.disabled=true;
+    if(k===Q.a) b.classList.add('right');
+    else if(k===i) b.classList.add('wrong');
+    else b.classList.add('dim');
+  });
+  finish(i===Q.a);
+}
+$('next').onclick=nextQuestion;
+/* ---------- 鍵盤（電腦）：↑↓ 移焦點、Enter 作答；A–D／1–4 直接作答；答完後 Enter 下一題。
+   觸控與滑鼠不經過這裡。
+   capture 階段統一處理 Enter：一次按下只算一次（連發、長按一律吞掉，連原生按鈕觸發也擋），
+   避免「作答那一下」的連發接著把下一題也跳掉。 */
+let enterDown=false;                                   // keyup 才解鎖
+document.addEventListener('keyup',e=>{ if(e.key==='Enter') enterDown=false; },true);
+addEventListener('blur',()=>{ enterDown=false; });
+document.addEventListener('keydown',e=>{
+  if(e.isComposing||e.keyCode===229) return;           // 輸入法組字中：交給輸入法
+  if(e.ctrlKey||e.metaKey||e.altKey) return;
+  if(e.key==='Enter'){
+    if(e.repeat||enterDown){ e.preventDefault(); e.stopPropagation(); return; }
+    enterDown=true;
+  }
+  // 範圍選單、資料過期提示開著，或還沒有題目：鍵盤照瀏覽器原生行為
+  if(!Q || $('quiz').hidden || !$('pick').hidden || !$('stale').hidden) return;
+  const t=e.target;
+  // 焦點在題目區以外的控制項（範圍、清空…）：不攔，讓 Enter 觸發它本身
+  // （剛關掉的範圍選單裡的「開始」鈕若還留著焦點，也算題目區）
+  const ours = t===document.body || t===cv || !!t.closest('[hidden]') || $('quiz').contains(t);
+  if(!ours) return;
+  if(e.key==='s'||e.key==='S'){ if(!e.repeat) $('star').click(); e.preventDefault(); return; }
+  if(answered){
+    if(e.key==='Enter'){ e.preventDefault(); nextQuestion(); }
+    return;
+  }
+  const opts=[...document.querySelectorAll('#opts .opt')];
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault();
+    const n=opts.length, cur=opts.indexOf(t), down=e.key==='ArrowDown';
+    opts[cur<0 ? (down?0:n-1) : (cur+(down?1:n-1))%n].focus({preventScroll:true});
+    return;
+  }
+  if(e.key==='Enter'){
+    e.preventDefault();
+    const i=opts.indexOf(t);
+    if(i>=0) answer(i);                                // 沒有選中任何選項時 Enter 不作答
+    return;
+  }
+  if(e.repeat) return;
+  const k=e.key.toUpperCase();
+  const idx='ABCD'.indexOf(k)>=0?'ABCD'.indexOf(k):'1234'.indexOf(k);
+  if(idx>=0 && k.length===1) answer(idx);
+},true);
+
+/* ---------- range picker ---------- */
+function updateScope(){
+  const ids=selIds(), m=ids.filter(mastered).length;
+  $('scope').textContent=rangeLabel(sel)+' · 熟 '+m+'/'+ids.length;
+}
+let draft=null, bookOpen=null;    // null／'wrong'（錯題本）／'star'（星號題）
+function openPick(){
+  draft={sel:[...sel],weakOnly,mix};
+  renderPick();
+  $('quiz').hidden=true; $('pick').hidden=false; $('pick').scrollTop=0;
+}
+const sortSel=()=>draft.sel.sort((a,c)=>RANGES.indexOf(rangeOf(a))-RANGES.indexOf(rangeOf(c)));
+function renderPick(){
+  const box=$('units'); box.innerHTML='';
+  RANGES.forEach(rg=>{
+    const ids=rg.ids(), m=ids.filter(mastered).length;
+    const b=document.createElement('button');
+    b.className='unit'; b.setAttribute('aria-pressed',draft.sel.includes(rg.key));
+    b.innerHTML='<span class="pg"></span><span class="desc"></span><span class="meta"></span><span class="bar"><i></i></span>';
+    b.querySelector('.pg').textContent=rg.label;
+    b.querySelector('.desc').textContent=rg.desc;
+    b.querySelector('.meta').textContent=ids.length+' 題 · 熟 '+m;
+    b.querySelector('i').style.width=(ids.length?m/ids.length*100:0)+'%';
+    b.disabled=!ids.length && !draft.sel.includes(rg.key);
+    b.onclick=()=>{
+      const i=draft.sel.indexOf(rg.key);
+      if(i>=0) draft.sel.splice(i,1); else draft.sel.push(rg.key);
+      sortSel(); renderPick();
+    };
+    box.appendChild(b);
+  });
+  const nWrong=ALL_IDS.filter(inWrongBook).length;
+  if(bookOpen && !bookIds(bookOpen).length) bookOpen=null;
+  $('book').textContent=(bookOpen==='wrong'?'收起錯題本':'看錯題本')+'（'+nWrong+'）';
+  $('book').disabled=!nWrong;
+  renderStarBtn();
+  renderBook();
+  $('weak').setAttribute('aria-pressed',draft.weakOnly);
+  $('mix').setAttribute('aria-pressed',draft.mix);
+  const inSel=idsOf(draft.sel), n=inSel.length;
+  const real=draft.weakOnly ? inSel.filter(id=>!mastered(id)).length : n;   // 實際可出題數
+  const go=$('go');
+  go.disabled=!real;
+  go.textContent=!draft.sel.length?'至少選一個範圍'
+    :!n?'這個範圍目前沒有題目'
+    :!real?'這些題都熟了——關掉「只出還不熟的題」或換範圍'
+    :'開始（'+rangeLabel(draft.sel)+'，共 '+real+' 題）';
+}
+document.querySelectorAll('.quick [data-q]').forEach(b=>{
+  b.onclick=()=>{
+    const want=b.dataset.q==='all' ? BASE : BASE.filter(k=>String(rangeOf(k).subj)===b.dataset.q);
+    draft.sel=want.slice(); sortSel(); renderPick();
+  };
+});
+/* ---------- 錯題本／星號題：點一下展開全文；右邊的 ☆ 可直接加減星號；可匯出成 Markdown 拿去分析 ---------- */
+// mode：'wrong' 錯題本、'star' 星號題、'all' 兩者聯集（錯題在前、依答錯次數；之後是只有星號的題）
+const BOOK_NAME={wrong:'錯題', star:'星號題', all:'錯題＋星號題'};
+function bookIds(mode){
+  const wrong=()=>ALL_IDS.filter(inWrongBook).sort((a,b)=>stats[b][2]-stats[a][2]);
+  if(mode==='star') return ALL_IDS.filter(id=>starred.has(id));
+  if(mode==='all'){ const w=wrong(), ws=new Set(w); return w.concat(ALL_IDS.filter(id=>starred.has(id)&&!ws.has(id))); }
+  return wrong();
+}
+// 星號、聯集按鈕的數字會因為點清單裡的 ☆ 而變，抽出來單獨刷新（不重畫清單，剛取消的那列先留著）
+function renderStarBtn(){
+  const b=$('starbook');
+  b.textContent=(bookOpen==='star'?'收起星號題':'看星號題')+'（'+starred.size+'）';
+  b.disabled=!starred.size && bookOpen!=='star';
+  const nAll=bookIds('all').length, a=$('allbook');
+  a.textContent=(bookOpen==='all'?'收起錯題＋星號':'錯題＋星號一起看')+'（'+nAll+'）';
+  a.disabled=!nAll && bookOpen!=='all';
+}
+function renderBook(){
+  const box=$('wrongbook'), mode=bookOpen;
+  box.hidden=!mode;
+  if(!mode) return;
+  const ids=bookIds(mode);
+  box.innerHTML='';
+  const head=document.createElement('div'); head.className='book-head';
+  const p=document.createElement('p'); p.className='sub';
+  const grad=ALL_IDS.filter(id=>everWrong(id)&&mastered(id)).length;
+  p.textContent= mode==='star' ? '標了星號 '+ids.length+' 題，其中答錯過 '+ids.filter(everWrong).length+' 題'
+    : mode==='all' ? '共 '+ids.length+' 題：錯題 '+ids.filter(inWrongBook).length+'、星號 '+ids.filter(id=>starred.has(id)).length+'（有些兩邊都算）'
+    : '待加強 '+ids.length+' 題'+(grad?'（已有 '+grad+' 題連對兩次、離開錯題本）':'');
+  const btns=document.createElement('div'); btns.className='book-btns';
+  const mk=(t,f)=>{const b=document.createElement('button'); b.className='ghost'; b.type='button'; b.textContent=t; b.onclick=f; btns.append(b);};
+  mk('只練這些',()=>{draft.sel= mode==='all' ? ['wrong','star'] : [mode];renderPick();$('go').scrollIntoView({block:'nearest',behavior:'smooth'})});
+  mk('下載',()=>downloadBook(mode));
+  mk('複製',()=>copyBook(mode));
+  head.append(p,btns); box.append(head);
+  const ul=document.createElement('ul'); ul.className='book';
+  for(const id of ids){
+    const q=QS[id], st=stats[id], li=document.createElement('li');
+    const btn=document.createElement('button'); btn.type='button'; btn.className='bq';
+    btn.setAttribute('aria-expanded','false');
+    const src=document.createElement('small'); src.className='src'; src.textContent=where(q)+(q.t?' · '+topicShort(q):'');
+    const tag=document.createElement('small');
+    if(st&&st[2]>0){
+      tag.className='tag'+(mastered(id)?' ok':'');
+      tag.textContent= mastered(id) ? '已熟 · 錯過 '+st[2]+' 次' : '錯 '+st[2]+' 次'+(st[0]===1?' · 再對一次就離開':'');
+    }
+    else{ tag.className='tag plain'; tag.textContent=st?'對 '+st[1]+' 次 · 沒錯過':'還沒作答過'; }
+    if(starred.has(id)&&starOk[id]===1) tag.textContent+=' · 星號再對一次就拿掉';
+    const stem=document.createElement('span'); stem.className='bstem'; stem.textContent=q.q;
+    const ans=document.createElement('span'); ans.className='bans'; ans.textContent='答案：'+q.o[q.a];
+    btn.append(src, tag, stem, ans);
+    btn.onclick=()=>{ const on=li.classList.toggle('open'); btn.setAttribute('aria-expanded',on); };
+    const sb=document.createElement('button'); sb.type='button'; sb.className='bstar';
+    const paint=()=>{const on=starred.has(id); sb.textContent=on?'★':'☆'; sb.setAttribute('aria-pressed',on); sb.setAttribute('aria-label',on?'拿掉星號':'標上星號');};
+    paint();
+    // 在星號題清單裡拿掉星號：這一列先留著（可以反悔再點回來），下次打開清單才消失
+    sb.onclick=()=>{ toggleStar(id); paint(); renderStarBtn(); };
+    li.append(btn, sb); ul.append(li);
+  }
+  box.append(ul);
+}
+/* ---------- 匯出：Markdown。選項照原始試卷順序（作答時可能打亂過），附主題、正解、選錯過的選項、解析、作答次數 ---------- */
+const pad=n=>String(n).padStart(2,'0');
+const ymd=(d,sep)=>d.getFullYear()+sep+pad(d.getMonth()+1)+sep+pad(d.getDate());
+// 已經離開錯題本的題（曾答錯、後來連對兩次）：匯出錯題時附在最後，讓分析看得出「後來會了」的部分
+const gradIds=()=>ALL_IDS.filter(id=>everWrong(id)&&mastered(id)).sort((a,b)=>stats[b][2]-stats[a][2]);
+function distLines(ids){
+  const L=[];
+  for(const s of [1,2]){
+    const sub=ids.filter(id=>QS[id].subj===s);
+    if(!sub.length) continue;
+    const c={}, src={};
+    sub.forEach(id=>{const q=QS[id]; c[q.t]=(c[q.t]||0)+1; const k=q.src==='guide'?'指引':q.src; src[k]=(src[k]||0)+1;});
+    L.push('- **科目'+CN[s]+' '+SUBJ[s]+'**：'+sub.length+' 題');
+    Object.keys(c).sort((a,b)=>c[b]-c[a]||(a<b?-1:1)).forEach(t=>L.push('  - '+topicLong({subj:s,t})+'：'+c[t]+' 題'));
+    L.push('  - 來源：'+Object.keys(src).sort().map(k=>k+' '+src[k]).join('、'));
+  }
+  return L;
+}
+function qBlock(id,n){
+  const q=QS[id], st=stats[id]||[0,0,0], flags=[], L=[];
+  if(st[2]>0) flags.push(mastered(id)?'已熟':'待加強');
+  else flags.push('沒答錯過');
+  flags.push('答錯 '+st[2]+' 次','答對 '+st[1]+' 次');
+  if(starred.has(id)) flags.push('★不確定');
+  L.push('### '+n+'. '+where(q)+'　〔'+flags.join(' · ')+'〕','');
+  if(q.t) L.push('主題：'+topicLong(q),'');
+  L.push(q.q,'');
+  q.o.forEach((o,k)=>L.push('('+'ABCD'[k]+') '+o+'  '));
+  L.push('');
+  L.push('- 正解：('+'ABCD'[q.a]+') '+q.o[q.a]);
+  const pk=picks[id]||[];
+  if(pk.length){
+    const c={}; pk.forEach(k=>c[k]=(c[k]||0)+1);
+    const keys=Object.keys(c).sort((a,b)=>c[b]-c[a]);
+    L.push('- 我選錯過：'+keys.map(k=>'('+'ABCD'[k]+') '+q.o[k]+(c[k]>1?'（'+c[k]+' 次）':'')).join('；')
+      +(keys.length>1?'；最近一次選 ('+'ABCD'[pk[pk.length-1]]+')':''));
+  }
+  L.push('- 解析：'+(q.ex||'（歷屆試題沒有官方解析）'),'');
+  return L;
+}
+function bookText(mode){
+  const ids=bookIds(mode), now=new Date(), L=[];
+  const listed=new Set(ids), grad= mode==='star' ? [] : gradIds().filter(id=>!listed.has(id));
+  L.push('# 初級智慧生產工程師・'+(mode==='star'?'星號題（不確定）':BOOK_NAME[mode])+'匯出','');
+  L.push('匯出時間：'+ymd(now,'-')+' '+pad(now.getHours())+':'+pad(now.getMinutes())+'　共 '+ids.length+' 題'+(grad.length?'，另附已經學會的錯題 '+grad.length+' 題':'')+'  ');
+  if(mode==='star') L.push('這些是我作答時覺得不確定、自己標上星號（★）的題，其中答錯過 '+ids.filter(everWrong).length+' 題。標星號後連對兩次，星號會自動拿掉。  ');
+  else if(mode==='all') L.push('包含錯題本（答錯過、還沒連對兩次）'+ids.filter(inWrongBook).length+' 題，以及我作答時覺得不確定、標上星號（★）的 '+ids.filter(id=>starred.has(id)).length+' 題，兩邊重複的只列一次。  ');
+  else L.push('這些是我答錯過、還沒連對兩次的題；其中 '+ids.filter(id=>starred.has(id)).length+' 題我也標了不確定（★）。  ');
+  L.push('「主題」是官方評鑑內容的細項（學習指引第一章），每題屬於哪一項是依題意判斷的，僅供參考。選項依原始試卷順序列出；歷屆試題沒有官方解析，學習指引的題目才有。','');
+  L.push('## 分布（依主題，多的在前）','');
+  L.push(...distLines(ids),'');
+  L.push('## 題目','');
+  ids.forEach((id,n)=>L.push(...qBlock(id,n+1)));
+  if(grad.length){
+    L.push('## 已經學會的錯題（曾經答錯，後來連續答對兩次）','');
+    L.push('這些題目前不在錯題本裡，列出來是為了看出哪些觀念後來弄懂了。','');
+    L.push(...distLines(grad),'');
+    grad.forEach((id,n)=>L.push(...qBlock(id,ids.length+n+1)));
+  }
+  return L.join('\n');
+}
+function downloadBook(mode){
+  const now=new Date();
+  const name='IPAS-SmartProduction-'+BOOK_NAME[mode]+'-'+ymd(now,'')+'-'+pad(now.getHours())+pad(now.getMinutes())+'.md';
+  const url=URL.createObjectURL(new Blob([bookText(mode)],{type:'text/markdown;charset=utf-8'}));
+  const a=document.createElement('a'); a.href=url; a.download=name;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+  toast('下載了 '+name);
+}
+function copyBook(mode){
+  const t=bookText(mode);
+  const done=()=>toast('複製好了，可以貼給 AI 幫你分析');
+  const fallback=()=>{
+    const ta=document.createElement('textarea'); ta.value=t; ta.style.cssText='position:fixed;opacity:0';
+    document.body.append(ta); ta.select();
+    let ok=false; try{ ok=document.execCommand('copy'); }catch(e){}
+    ta.remove(); if(ok) done(); else toast('複製失敗，改用「下載」');
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done,fallback);
+  else fallback();
+}
+$('book').onclick=()=>{bookOpen=bookOpen==='wrong'?null:'wrong';renderPick()};
+$('starbook').onclick=()=>{bookOpen=bookOpen==='star'?null:'star';renderPick()};
+$('allbook').onclick=()=>{bookOpen=bookOpen==='all'?null:'all';renderPick()};
+$('weak').onclick=()=>{draft.weakOnly=!draft.weakOnly;renderPick()};
+$('mix').onclick=()=>{draft.mix=!draft.mix;renderPick()};
+$('range').onclick=()=>{ if($('pick').hidden) openPick(); else closePick(false); };
+function closePick(apply){
+  if(apply){
+    const changed=JSON.stringify([sel,weakOnly])!==JSON.stringify([draft.sel,draft.weakOnly]);
+    const mixChanged=mix!==draft.mix;
+    sel=draft.sel; weakOnly=draft.weakOnly; mix=draft.mix;
+    if(changed || !Q){
+      const inSel=new Set(selIds());
+      order=[]; qi=-1; retry=retry.filter(x=>inSel.has(x.id));
+      $('pick').hidden=true; $('quiz').hidden=false;
+      nextQuestion(); return;
+    }
+    if(mixChanged && !answered){ Q=buildQ(Q.id); showQuestion(); }
+    save();
+  }
+  if(!Q) return;                 // nothing to go back to yet
+  $('pick').hidden=true; $('quiz').hidden=false;
+  updateScope();
+}
+$('go').onclick=()=>closePick(true);
+let wipeT=null;
+$('wipe').onclick=()=>{
+  const b=$('wipe');
+  if(!b.classList.contains('armed')){
+    b.classList.add('armed'); b.textContent='再按一次清除';
+    clearTimeout(wipeT); wipeT=setTimeout(()=>{b.classList.remove('armed');b.textContent='清除作答紀錄'},3000);
+    return;
+  }
+  clearTimeout(wipeT); b.classList.remove('armed'); b.textContent='清除作答紀錄';
+  stats={}; picks={}; retry=[]; order=[]; qi=-1; Q=null;
+  renderPick(); save(); toast('作答紀錄清掉了（星號還留著）');
+};
+
+const DROP_SVG='<svg viewBox="0 0 18 24" aria-hidden="true"><path d="M9 1C9 1 2 10 2 15a7 7 0 0 0 14 0C16 10 9 1 9 1Z" fill="var(--water)"/><path d="M6 15a3 3 0 0 0 3 3" stroke="#fff" stroke-opacity=".6" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>';
+function renderDrops(gained){
+  const d=$('drops'), water=world.water;
+  if(water===0){d.innerHTML='<span class="none">答對一題就有水</span>';d.removeAttribute('aria-label');return}
+  const cap=innerWidth<480?6:12;
+  const n=Math.min(water,cap);
+  let h=''; for(let i=0;i<n;i++) h+=DROP_SVG;
+  if(water>cap) h+='<span class="more">共 '+water+' 滴</span>';
+  d.innerHTML=h;
+  d.setAttribute('aria-label','手上有 '+water+' 滴水');
+  if(gained && water<=cap) for(let i=Math.max(0,n-REWARD);i<n;i++) d.children[i].classList.add('pop');
+}
+
+/* ================= 土地（共用 world：one-drop-lib/world.vX.Y.js） =================
+   土地、植物、居民、手上的水、存檔都由 world 負責；這裡只接事件、決定要說什麼。 */
+// github.io 上所有 trinkets 頁面共用同一個 localStorage，key 要帶頁面名字，不能跟 one-drop.html 撞
+const SAVE_KEY='ipas-drop-v1';
+const cv=$('cv');
+let toastT;
+function toast(t){const el=$('toast');el.textContent=t;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2200)}
+// world 發現新東西時要不要說話：查不到的 kind 就安靜（之後 world 加新種類，這頁不用改也不會出錯）
+const DISCOVER_TEXT={pond:'水積成了一個小水塘','rare-flower':'開了一朵沒見過的花',butterfly:'有東西飛來了'};
+const world=OneDropWorld.create({
+  root:$('land'), key:SAVE_KEY, snapshotPrefix:'我的小土地-iPAS-',
+  getProgress:()=>({sel, weakOnly, mix, stats, order, qi, shown, retry, Q, again, answered, starred:[...starred], picks, starOk}),      // 原有欄位與順序照舊；v5 起在最後加 starred、picks，v7 加 starOk（picks 改為陣列）
+});
+world.on('water',e=>renderDrops(e.gained));
+world.on('discover',e=>{ if(DISCOVER_TEXT[e.kind]) toast(DISCOVER_TEXT[e.kind]); });
+world.on('nowater',()=>toast('答對一題，就有兩滴水'));
+world.on('message',toast);
+// 橫幅：stale（別的分頁改了存檔）與 saveFailed（寫入失敗）都由這頁擁有；兩個同時成立時只顯示 stale
+let stale=false, saveFailed=false;
+function showBanners(){ $('stale').hidden=!stale; $('savewarn').hidden=!saveFailed||stale; }
+world.on('external',()=>{ stale=true; world.freeze(); showBanners(); });
+world.on('saveerror',()=>{ saveFailed=true; showBanners(); });
+world.on('saved',()=>{ if(saveFailed){ saveFailed=false; showBanners(); } });
+function save(){ world.save(); }
+// 版本號（範圍選單底部）：頁面改了就更新 PAGE_VERSION；world 的版本由載入的 world 檔自己報
+const PAGE_VERSION='v7 · 2026-10-12';
+$('ver').textContent=PAGE_VERSION+' · world '+OneDropWorld.VERSION;
+
+/* ================= 讀檔（題庫進度） ================= */
+// returns 'question' when a question is back on screen, 'next' when the quiz can continue, false for a fresh start
+function load(){
+  const d=world.load();                  // 土地由 world 讀進去；這裡只還原題庫進度
+  if(!d) return false;
+  if(d.stats && typeof d.stats==='object') for(const k in d.stats) if(QS[k]) stats[k]=d.stats[k];
+  if(Array.isArray(d.starred)) d.starred.forEach(id=>{ if(QS[id]) starred.add(id); });
+  if(d.picks && typeof d.picks==='object') for(const k in d.picks){      // v5 存的是單一數字，v7 起是陣列
+    if(!QS[k]) continue;
+    const a=[].concat(d.picks[k]).filter(x=>Number.isInteger(x)&&x>=0&&x<4&&x!==QS[k].a);
+    if(a.length) picks[k]=a.slice(-20);
+  }
+  if(d.starOk && typeof d.starOk==='object') for(const k in d.starOk) if(starred.has(k)) starOk[k]=Math.min(1,Math.max(0,d.starOk[k]|0));
+  weakOnly=!!d.weakOnly;
+  mix=d.mix!==false;
+  if(Array.isArray(d.sel)){
+    const ok=d.sel.filter(k=>rangeOf(k));
+    if(ok.length) sel=ok; else return false;      // the saved range no longer exists: ask again
+  }else return false;
+  const inSel=new Set(selIds());
+  if(Array.isArray(d.order) && d.order.length && d.order.every(id=>QS[id])){
+    order=d.order; qi=d.qi|0; shown=d.shown|0;
+  }
+  retry=Array.isArray(d.retry)?d.retry.filter(x=>x&&QS[x.id]&&inSel.has(x.id)):[];
+  const q=d.Q;
+  if(q && QS[q.id] && !d.answered && validPerm(q.perm) && q.a===q.perm.indexOf(QS[q.id].a)){
+    Q=q; again=!!d.again; return 'question';
+  }
+  return 'next';
+}
+
+/* ================= clear the land ================= */
+let armT=null;
+$('reset').onclick=()=>{
+  const b=$('reset');
+  if(!b.classList.contains('armed')){
+    b.classList.add('armed'); b.textContent='再按一次清空';
+    clearTimeout(armT);
+    armT=setTimeout(()=>{b.classList.remove('armed');b.textContent='清空土地'},3000);
+    return;
+  }
+  clearTimeout(armT); b.classList.remove('armed'); b.textContent='清空土地';
+  world.reset();
+  toast('土地清空了，作答紀錄還在');
+};
+
+/* ================= start ================= */
+(function init(){
+  const resumed=load();
+  if(resumed==='question'){ $('quiz').hidden=false; showQuestion(); }
+  else if(resumed==='next'){ $('quiz').hidden=false; nextQuestion(); }
+  else openPick();
+  world.refresh();
+})();
+
+</script>
+</body>
+</html>
