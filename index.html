@@ -40,9 +40,17 @@ button{font:inherit;color:inherit}
 kbd{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.85em;background:var(--opt);
   border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:.05em .4em}
 
-.theme-toggle{position:fixed;top:.8rem;right:.8rem;z-index:10;font-size:.85rem;color:var(--ink);
+.theme-toggle{font-size:.85rem;color:var(--ink);
   background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:.35rem .9rem;cursor:pointer;opacity:.92}
 .theme-toggle:hover{opacity:1}
+#auth-wrap{position:fixed;top:.8rem;right:.8rem;z-index:10;display:flex;gap:.4rem;align-items:center;
+  flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 1.6rem)}
+#user-chip{display:inline-flex;align-items:center;gap:.35rem;font-size:.82rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:.28rem .7rem;opacity:.95}
+#resume-bar{display:inline-flex;align-items:center;gap:.5rem;margin-top:.8rem;font-size:.9rem;
+  color:var(--water);background:color-mix(in srgb,var(--water) 10%,var(--opt));
+  border:1px solid color-mix(in srgb,var(--water) 45%,var(--line));border-radius:999px;padding:.35rem 1rem}
+#resume-bar button{border:0;background:none;color:inherit;font:inherit;cursor:pointer;text-decoration:underline}
 
 .hero{position:relative;background:var(--soil);background-image:var(--circuit);
   border-bottom:1px solid var(--line);overflow:hidden}
@@ -196,7 +204,15 @@ h3{font-size:1rem;margin:1.1rem 0 .4rem;color:var(--muted);font-weight:700}
 </style>
 </head>
 <body>
-<button class="theme-toggle" id="theme-btn" type="button">深色</button>
+<div id="auth-wrap">
+  <button class="theme-toggle" id="theme-btn" type="button">深色</button>
+  <button class="theme-toggle" id="login-btn" type="button">Google 登入</button>
+  <span id="user-chip" hidden>
+    <img id="user-avatar" width="20" height="20" alt="" style="border-radius:50%;vertical-align:middle">
+    <span id="user-name"></span>
+    <button class="theme-toggle" id="logout-btn" type="button">登出</button>
+  </span>
+</div>
 
 <header class="hero">
   <div class="hero-inner">
@@ -241,7 +257,7 @@ h3{font-size:1rem;margin:1.1rem 0 .4rem;color:var(--muted);font-weight:700}
     <li>作答後立即顯示正解與解析；答錯的題目會自動收入錯題紀錄。</li>
     <li>鍵盤操作：<kbd>A</kbd>–<kbd>D</kbd> 或 <kbd>1</kbd>–<kbd>4</kbd> 作答，<kbd>Enter</kbd> 進入下一題。</li>
     <li>全部完成後顯示得分、正確率與是否達到 <b>80%</b> 及格門檻，並可回顧錯題、只練錯題。</li>
-    <li>選項依歷屆試題原始順序呈現；成績僅儲存於你的瀏覽器，不會上傳。</li>
+    <li>選項依歷屆試題原始順序呈現；未登入時成績僅儲存於你的瀏覽器，登入 Google 帳號後可跨裝置同步進度與歷史紀錄。</li>
   </ul>
   <p class="src-note">題目來源：阿摩線上測驗收錄之歷屆「初級智慧生產工程師」試題 6 卷（#114329、#114720、#117718、#123480、#133382、#133489），答案為該站收錄之官方解答；8 題因原卷以圖片呈現表格或公式、無法完整重現而未收錄。112 年兩卷之先後依題庫上線順序推定。解析由本頁整理。本頁為學習模擬，非 iPAS 官方測驗，正式應考請以主辦單位公告為準。</p>
   <div class="btn-row">
@@ -542,7 +558,7 @@ const PASS_RATIO=0.8;
 const LS_KEY='smfg_quiz_v2';
 let sel={mode:'mixed',key:'mixed'};          // 首頁目前選擇
 let ctx={mode:'mixed',key:'mixed',label:'混合歷屆'}; // 本次作答內容
-let list=[],idx=0,answered=false,correct=0,wrongs=[],states=[];
+let list=[],idx=0,answered=false,correct=0,wrongs=[],states=[],picks=[];
 let startT=0,timerId=null,cur=null;
 
 function fmtTime(ms){const s=Math.max(0,Math.round(ms/1000));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
@@ -554,6 +570,7 @@ function setTheme(t){
   document.documentElement.setAttribute('data-theme',t);
   $('theme-btn').textContent=t==='dark'?'淺色':'深色';
   save({theme:t});
+  if(window.FS&&FS.onTheme)FS.onTheme(t);
 }
 $('theme-btn').onclick=()=>setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
 (function initTheme(){
@@ -612,10 +629,11 @@ function buildList(){
   return ids.map(u=>Object.assign({uid:u},BANK[u]));
 }
 function begin(l,m,key,label){
-  list=l;idx=0;answered=false;correct=0;wrongs=[];states=list.map(()=>null);
+  list=l;idx=0;answered=false;correct=0;wrongs=[];states=list.map(()=>null);picks=list.map(()=>null);
   ctx={mode:m,key:key,label:label||(m==='mixed'?'混合歷屆':termLabel(key))};
   startT=Date.now();clearInterval(timerId);
   showView('quiz');renderQ();
+  if(window.FS&&FS.onBegin)FS.onBegin();
 }
 function startSel(){begin(buildList(),sel.mode,sel.mode==='mixed'?'mixed':sel.key,selLabel())}
 function renderQ(){
@@ -647,6 +665,7 @@ function choose(i){
   const q=cur.q,ok=(i===q.a);
   if(ok)correct++;else wrongs.push({q,pick:q.o[i],right:q.o[q.a],ex:q.ex});
   states[idx]=ok;
+  picks[idx]=i;
   [...document.querySelectorAll('#opts .opt')].forEach((b,k)=>{
     b.disabled=true;
     if(k===q.a)b.classList.add('right');
@@ -666,6 +685,7 @@ function choose(i){
   $('btn-next').textContent=idx<list.length-1?'下一題':'查看結果';
   $('live').textContent='目前已答對 '+correct+' / '+list.length+' 題';
   updateProgress();renderDots();
+  if(window.FS&&FS.onAnswer)FS.onAnswer();
 }
 function nextQ(){
   if(idx<list.length-1){idx++;renderQ();}
@@ -695,6 +715,8 @@ function finish(){
   const best=Object.assign({},st.best);
   best[ctx.key]=best[ctx.key]!=null?Math.max(best[ctx.key],pct):pct;
   save({runs,best});
+  if(window.FS&&FS.onFinish)FS.onFinish({total:total,correct:correct,pct:pct,pass:pass,elapsed:elapsed,
+    errs:wrongs.map(w=>({uid:w.q.uid,pick:w.pick,right:w.right}))});
   $('r-title').textContent=ctx.mode==='wrong'?'錯題重練成績':'測驗結果';
   $('r-score').textContent=pct+'%';
   const pill=$('r-pill');
@@ -756,6 +778,190 @@ document.addEventListener('keydown',e=>{
 })();
 paintIntro();
 
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+/* ================= Firebase 登入與雲端同步 ================= */
+window.FS = window.FS || {};
+(function(){
+  // 若 SDK 未載入，靜默退出（不影響原有測驗功能）
+  if (!window.firebase || !firebase.initializeApp) { console.warn('Firebase SDK 載入失敗，雲端同步停用'); return; }
+  const firebaseConfig = {
+    apiKey: "AIzaSyBlNhHdZo0av25HeI8lMLvJZk_svMSjOQk",
+    authDomain: "ipas-quiz-29970.firebaseapp.com",
+    projectId: "ipas-quiz-29970",
+    storageBucket: "ipas-quiz-29970.firebasestorage.app",
+    messagingSenderId: "649137483531",
+    appId: "1:649137483531:web:6d2d1a5ca456623a79bc0e",
+    measurementId: "G-SV61FT0NC7"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  const el = id => document.getElementById(id);
+  let uid = null;
+  let saveTimer = null;
+
+  /* ---- 登入 / 登出 ---- */
+  el('login-btn').addEventListener('click', async () => {
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      await auth.signInWithPopup(provider);
+    } catch (e) {
+      alert('登入失敗：' + ((e && e.message) || e));
+    }
+  });
+  el('logout-btn').addEventListener('click', () => auth.signOut());
+
+  auth.onAuthStateChanged(async user => {
+    const btn = el('login-btn'), chip = el('user-chip');
+    if (user) {
+      uid = user.uid;
+      btn.hidden = true; chip.hidden = false;
+      el('user-name').textContent = user.displayName || '使用者';
+      const img = el('user-avatar');
+      if (user.photoURL) { img.src = user.photoURL; img.hidden = false; } else { img.hidden = true; }
+      await loadCloudProgress();
+    } else {
+      uid = null;
+      btn.hidden = false; chip.hidden = true;
+      removeResumeBar();
+    }
+  });
+
+  function docRef(){ return db.collection('progress').doc(uid); }
+  const serverTs = () => firebase.firestore.FieldValue.serverTimestamp();
+
+  /* ---- 初次登入：合併本地與雲端紀錄 ---- */
+  async function loadCloudProgress(){
+    if (!uid) return;
+    try {
+      const snap = await docRef().get();
+      const cloud = snap.exists ? snap.data() : {};
+      const st = store();
+      const runs = Math.max(cloud.runs || 0, st.runs || 0);
+      const best = {};
+      const keys = new Set(Object.keys(cloud.best || {}).concat(Object.keys(st.best || {})));
+      keys.forEach(k => {
+        const a = (cloud.best || {})[k], b = (st.best || {})[k];
+        best[k] = (a == null) ? b : (b == null) ? a : Math.max(a, b);
+      });
+      save({ runs: runs, best: best, theme: cloud.theme || st.theme });
+      await docRef().set({
+        displayName: auth.currentUser.displayName || null,
+        email: auth.currentUser.email || null,
+        photoURL: auth.currentUser.photoURL || null,
+        runs: runs, best: best, updatedAt: serverTs()
+      }, { merge: true });
+      refreshMeta();
+      const cur = cloud.current;
+      if (cur && Array.isArray(cur.ids) && cur.ids.length && !el('view-intro').hidden) {
+        showResumeBar(cur);
+      }
+    } catch (e) {
+      console.warn('讀取雲端進度失敗：', e);
+    }
+  }
+
+  /* ---- 進行中測驗：顯示「繼續作答」按鈕 ---- */
+  function showResumeBar(cur){
+    removeResumeBar();
+    const bar = document.createElement('div');
+    bar.id = 'resume-bar';
+    const idxN = Math.min((cur.idx || 0) + 1, cur.ids.length);
+    bar.textContent = '雲端有進行中的測驗：' + (cur.label || '') + '，第 ' + idxN + ' / ' + cur.ids.length + ' 題';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '繼續作答';
+    btn.onclick = () => { resumeCurrent(cur); removeResumeBar(); };
+    bar.appendChild(btn);
+    const row = el('view-intro').querySelector('.btn-row');
+    if (row && row.parentElement) row.parentElement.insertBefore(bar, row);
+  }
+  function removeResumeBar(){ const old = el('resume-bar'); if (old) old.remove(); }
+
+  function resumeCurrent(cur){
+    list = cur.ids.map(u => Object.assign({ uid: u }, BANK[u])).filter(q => q && q.q);
+    if (!list.length) return;
+    idx = Math.max(0, Math.min(cur.idx || 0, list.length - 1));
+    states = list.map(() => null); picks = list.map(() => null);
+    correct = 0; wrongs = [];
+    (cur.picks || []).forEach((p, i) => {
+      if (p == null || i >= list.length) return;
+      const q = list[i], ok = (p === q.a);
+      states[i] = ok; picks[i] = p;
+      if (ok) correct++;
+      else wrongs.push({ q: q, pick: q.o[p], right: q.o[q.a], ex: q.ex });
+    });
+    ctx = { mode: cur.mode || 'mixed', key: cur.key || 'mixed', label: cur.label || '混合歷屆' };
+    startT = cur.startT || Date.now();
+    answered = false;
+    showView('quiz'); renderQ();
+  }
+
+  /* ---- 同步進行中進度（debounce 0.4 秒） ---- */
+  function scheduleSave(){
+    if (!uid) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(persistCurrent, 400);
+  }
+  function currentSnapshot(){
+    if (!list.length) return null;
+    return {
+      mode: ctx.mode, key: ctx.key, label: ctx.label,
+      ids: list.map(q => q.uid),
+      idx: idx,
+      picks: picks.slice(),
+      correct: correct,
+      startT: startT
+    };
+  }
+  function persistCurrent(){
+    if (!uid) return;
+    docRef().set({ current: currentSnapshot(), updatedAt: serverTs() }, { merge: true })
+      .catch(e => console.warn('同步進度失敗：', e));
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && uid && list.length) {
+      clearTimeout(saveTimer);
+      persistCurrent();
+    }
+  });
+
+  /* ---- 測驗結束：寫一筆歷史紀錄 ---- */
+  async function recordFinish(res){
+    if (!uid) return;
+    clearTimeout(saveTimer);
+    try {
+      await docRef().collection('attempts').add({
+        at: serverTs(),
+        mode: ctx.mode, key: ctx.key, label: ctx.label,
+        total: res.total,
+        correct: res.correct != null ? res.correct : correct,
+        pct: res.pct,
+        pass: !!res.pass,
+        timeMs: res.elapsed,
+        wrongs: (res.errs || []).map(w => ({ uid: w.uid, pick: w.pick, right: w.right }))
+      });
+      await docRef().set({ current: null, updatedAt: serverTs() }, { merge: true });
+    } catch (e) {
+      console.warn('寫入歷史紀錄失敗：', e);
+    }
+  }
+
+  /* ---- 主流程掛勾 ---- */
+  window.FS.onBegin = function(){ removeResumeBar(); scheduleSave(); };
+  window.FS.onAnswer = scheduleSave;
+  window.FS.onFinish = recordFinish;
+  window.FS.onTheme = function(t){
+    if (uid) docRef().set({ theme: t, updatedAt: serverTs() }, { merge: true }).catch(()=>{});
+  };
+})();
 </script>
 </body>
 </html>
