@@ -830,11 +830,22 @@ function updateProgress(){
   $('bar-fill').style.width=pct+'%';
   $('bar').setAttribute('aria-valuenow',pct);
 }
+function maxReached(){
+  let m=-1;
+  states.forEach((s,i)=>{if(s!==null)m=i;});
+  return Math.max(m,idx);
+}
 function renderDots(){
   const d=$('dots');d.innerHTML='';
+  const reach=maxReached();
   states.forEach((s,i)=>{
     const el=document.createElement('span');
     el.className='dot'+(s===true?' ok':s===false?' no':'')+(i===idx&&s===null?' now':'');
+    if(i<=reach&&i!==idx){
+      el.style.cursor='pointer';
+      el.title='第 '+(i+1)+' 題（點擊跳至）';
+      el.onclick=()=>{idx=i;renderQ();};
+    }
     d.appendChild(el);
   });
 }
