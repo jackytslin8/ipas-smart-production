@@ -281,6 +281,7 @@ h3{font-size:1rem;margin:1.1rem 0 .4rem;color:var(--muted);font-weight:700}
     <p class="msg" id="msg" role="status"></p>
     <div class="card-ans" id="card-ans"></div>
     <div class="btn-row">
+      <button class="btn" id="btn-prev" type="button" hidden>上一題</button>
       <button class="btn primary" id="btn-next" type="button">下一題</button>
       <button class="btn ghost" id="btn-restart" type="button">重新開始</button>
       <span class="mini">提示：A–D 或 1–4 快速作答，Enter 下一題</span>
@@ -742,6 +743,31 @@ function renderQ(){
   const q=list[idx];
   cur={q};
   answered=false;
+  if(states[idx]!==null&&states[idx]!==undefined){
+    // 回到已作答的題目：還原作答結果與解析
+    answered=true;
+    const i=picks[idx],ok=states[idx];
+    setTimeout(()=>{
+      [...document.querySelectorAll('#opts .opt')].forEach((b,k)=>{
+        b.disabled=true;
+        if(k===q.a)b.classList.add('right');
+        else if(k===i)b.classList.add('wrong');
+        else b.classList.add('dim');
+      });
+      const msg=$('msg');
+      msg.textContent=ok?'答對了。':'答案是 '+LETTERS[q.a]+'，把觀念再看一遍。';
+      msg.className='msg '+(ok?'good':'bad');
+      const box=$('card-ans');box.innerHTML='';
+      const b1=document.createElement('b');b1.textContent='正解 '+LETTERS[q.a];
+      const s=document.createElement('span');s.textContent=q.o[q.a];
+      const e=document.createElement('div');e.className='ex';e.textContent='解析：'+q.ex;
+      const sc=document.createElement('div');sc.className='src2';sc.textContent='來源：'+q.terms.join('、')+' 初級智慧生產工程師歷屆試題'+(q.terms.includes('115-1')?'（iPAS 官方公告試題）':'（阿摩線上測驗）');
+      box.append(b1,s,e,sc);
+      $('after').hidden=false;
+      $('btn-next').textContent=idx<list.length-1?'下一題':'查看結果';
+      $('btn-prev').hidden=(idx===0);
+    },0);
+  }
   $('qcount').textContent='第 '+(idx+1)+' / '+list.length+' 題';
   $('qcat').textContent=TOPIC_TXT[q.topic]||q.topic;
   $('qtopic').textContent=ctx.label;
@@ -757,6 +783,7 @@ function renderQ(){
     li.appendChild(b);ul.appendChild(li);
   });
   $('after').hidden=true;
+  $('btn-prev').hidden=(idx===0);
   $('live').textContent='目前已答對 '+correct+' 題';
   updateProgress();renderDots();
   if(idx>0)$('view-quiz').scrollIntoView({block:'start',behavior:'smooth'});
@@ -793,6 +820,10 @@ function nextQ(){
   if(idx<list.length-1){idx++;renderQ();}
   else finish();
 }
+function prevQ(){
+  if(idx>0){idx--;renderQ();}
+}
+$('btn-prev').onclick=prevQ;
 function updateProgress(){
   const done=states.filter(s=>s!==null).length;
   const pct=Math.round(done/list.length*100);
