@@ -377,7 +377,7 @@ function refreshMeta(){
 }
 
 /* ================= 模式選擇（首頁） ================= */
-function selCount(){return sel.mode==='mixed'?MIXED.length:PAPERS[sel.key].length}
+const MIXED_N=50;function selCount(){return sel.mode==='mixed'?MIXED_N:PAPERS[sel.key].length}
 function selLabel(){return sel.mode==='mixed'?'混合歷屆 50 題':termLabel(sel.key)+'・'+PAPERS[sel.key].length+' 題'}
 function paintIntro(){
   document.querySelectorAll('.mode-card').forEach(b=>{
